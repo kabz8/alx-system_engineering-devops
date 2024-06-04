@@ -1,27 +1,16 @@
-# Puppet manifest to troubleshoot and fix Apache 500 error using strace
-
-# Install strace
-package { 'strace':
+package { 'php5-mbstring':
   ensure => installed,
 }
 
-# Run strace on Apache process to identify the cause of 500 error
-exec { 'run_strace':
-  command     => 'strace -p $(pgrep apache2) 2>&1 | tee /tmp/strace_output.txt',
-  path        => ['/bin', '/usr/bin'],
-  refreshonly => true,
-}
-
-# Fix the identified issue (example fix - replace with your actual fix)
-file { '/etc/apache2/apache2.conf':
-  ensure  => file,
-  content => template('apache2/apache2.conf.erb'), # Example template
-  require => Exec['run_strace'],
-}
-
-# Restart Apache to apply the fix
 service { 'apache2':
-  ensure     => running,
-  enable     => true,
-  subscribe  => File['/etc/apache2/apache2.conf'],
+  ensure => running,
+  enable => true,
+  require => Package['php5-mbstring'],
+}
+
+exec { 'enable-mbstring':
+  command => '/usr/sbin/php5enmod mbstring',
+  unless  => '/usr/sbin/php5query -s -d mbstring',
+  require => Package['php5-mbstring'],
+  notify  => Service['apache2'],
 }
